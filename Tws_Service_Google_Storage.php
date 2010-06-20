@@ -62,11 +62,25 @@ class Tws_Service_Google_Storage
     static protected $_google_access_key_secret;
 
     /**
+     * The last Response from Google Storage
+     *
+     * @var string
+     */
+    protected $_response;
+
+    /**
      * Stores the headers that come back with a response
      * 
      * @var array
      */
     protected $_responseHeaders;
+
+    /**
+     * Stores the Request headers for the last request
+     *
+     * @var array
+     */
+    protected $_requestHeaders;
 
     /**
      * Creates a Google Storage object
@@ -176,7 +190,6 @@ class Tws_Service_Google_Storage
             array(
                 CURLOPT_RETURNTRANSFER => false,
                 CURLOPT_NOBODY => true,
-                CURLOPT_HEADERFUNCTION, array($this, 'saveHeaders'),
             ),
             Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$object
         );
@@ -257,6 +270,36 @@ class Tws_Service_Google_Storage
         }
 
         return $fileList;
+    }
+
+    /**
+     * Returns the last set of Request headers
+     *
+     * @return array
+     */
+    public function getRequestHeaders()
+    {
+        return $this->_requestHeaders;
+    }
+
+    /**
+     * Returns the last set of Response
+     *
+     * @return array
+     */
+    public function getResponse()
+    {
+        return $this->_response;
+    }
+
+    /**
+     * Returns the last set of Response headers
+     *
+     * @return array
+     */
+    public function getResponseHeaders()
+    {
+        return $this->_responseHeaders;
     }
 
     /**
@@ -352,6 +395,10 @@ class Tws_Service_Google_Storage
      */
     protected function _sendRequest($requestDate, $message, $curlopts = array(), $uri = Tws_Service_Google_Storage::GOOGLE_STORAGE_URI)
     {
+        $this->_responseHeaders = array();
+        $this->_requestHeaders = array();
+        $this->_response = array();
+
         $signature = $this->_generateSignature($message);
         $ch = curl_init($uri);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
@@ -360,6 +407,8 @@ class Tws_Service_Google_Storage
             'Date: '.$requestDate,
             'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
             ));
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, array($this, 'saveHeaders'));
+        curl_setopt($ch, CURLINFO_HEADER_OUT, true);
         curl_setopt_array($ch, $curlopts);
 
         if($this->_debug) {
@@ -369,9 +418,8 @@ class Tws_Service_Google_Storage
 
         $response = curl_exec($ch);
 
-        if($this->_debug) {
-            echo $response;
-        }
+        $this->_requestHeaders = explode("\n", curl_getinfo($ch, CURLINFO_HEADER_OUT));
+        $this->_response = $response;
 
         curl_close($ch);
 
