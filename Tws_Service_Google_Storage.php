@@ -39,6 +39,13 @@ class Tws_Service_Google_Storage
     const GOOGLE_STORAGE_URI = 'commondatastorage.googleapis.com';
 
     /**
+     * Flag for Debug Mode
+     *
+     * @var bool
+     */
+    protected $_debug = false;
+
+    /**
      * Key provided by Google for accessing services
      * 
      * @var string
@@ -354,10 +361,30 @@ class Tws_Service_Google_Storage
             'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
             ));
         curl_setopt_array($ch, $curlopts);
+
+        if($this->_debug) {
+            curl_setopt($ch, CURLOPT_VERBOSE, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        }
+
         $response = curl_exec($ch);
+
+        if($this->_debug) {
+            echo $response;
+        }
+
         curl_close($ch);
 
         return $response;
+    }
+
+    public function setDebug($value)
+    {
+        if(is_bool($value)) {
+            $this->_debug = $value;
+        } else {
+            throw new Exception("Debug Flag must be a boolean value");
+        }
     }
 
     /**
