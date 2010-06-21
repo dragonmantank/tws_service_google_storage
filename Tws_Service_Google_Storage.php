@@ -321,7 +321,6 @@ class Tws_Service_Google_Storage
      * Removes an empty bucket. Will return false if the bucket
      * is not empty
      *
-     * @todo Change to use _sendRequest()
      * @param string $name Bucket to remove
      * @return bool
      */
@@ -329,21 +328,16 @@ class Tws_Service_Google_Storage
     {
         $requestDate = date('D, d M Y H:i:s T');
         $message = "DELETE\n\n\n$requestDate\n/$name";
-        $signature = $this->_generateSignature($message);
-
-        $ch = curl_init('commondatastorage.googleapis.com/'.$name);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Length: 0',
-            'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature,
-            'Date: '.$requestDate,
-            'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
-            ));
-        curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-
-        curl_exec($ch);
-        curl_close($ch);
+        
+        $this->_sendRequest(
+            $requestDate, 
+            $message, 
+            array(
+                CURLOPT_CUSTOMREQUEST => "DELETE",
+                CURLOPT_NOBODY => true,
+            ), 
+            Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$name
+        );
     }
 
     /**
