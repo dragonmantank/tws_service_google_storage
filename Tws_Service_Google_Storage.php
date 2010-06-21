@@ -205,7 +205,6 @@ class Tws_Service_Google_Storage
      * Returns the object into memory, which can be written to
      * disk with file_get_contents()
      *
-     * @todo Change to use _sendRequest()
      * @param string $object Path of the object to download
      * @return string
      */
@@ -213,19 +212,12 @@ class Tws_Service_Google_Storage
     {
         $requestDate = date('D, d M Y H:i:s T');
         $message = "GET\n\n\n$requestDate\n/$object";
-        $signature = $this->_generateSignature($message);
-
-        $ch = curl_init('commondatastorage.googleapis.com/'.$object);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Length: 0',
-            'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature,
-            'Date: '.$requestDate,
-            'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
-            ));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $response = curl_exec($ch);
-        curl_close($ch);
+        
+        $response = $this->_sendRequest($requestDate, $message, array(
+            CURLOPT_RETURNTRANSFER => true
+            ),
+            Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$object
+        );
 
         return $response;
     }
