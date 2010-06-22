@@ -316,8 +316,60 @@ class Tws_Service_Google_Storage
     {
     }
 
+    /**
+     * Uploads a file to the specified path
+     *
+     * This will post a local FS file to Google Storage. It doesn't set
+     * any metadata and uses its own CURL code so needs proper integration.
+     * If the file exists, it will overwrite without warning.
+     *
+     * Still need to:
+     *  - Use the $meta argument
+     *  - How to handle existing files
+     *  - Check to see if bucket exists first
+     *  - Depends on finfo, may need to work on that
+     *  - Modify _sendRequest() to handle additional headers
+     *
+     * @todo Clean Up, this code is UGLY
+     * @param string $path Path to the file on the local FS
+     * @param string $object bucket/filename on Google Storage
+     * @param array $meta Meta Data (Not used yet)
+     */
     public function putFile($path, $object, $meta)
     {
+        $this->_responseHeaders = array();
+        $this->_requestHeaders = array();
+        $this->_response = array();
+
+        $fh = finfo_open(FILEINFO_MIME_TYPE);
+        $mimetype = finfo_file($fh, $path);
+
+        list($bucket, $file) = explode('/', $object);
+        $requestDate = $this->_getRequestTime();
+        $message = "PUT\n\n$mimetype\n$requestDate\n/$object";
+
+        $signature = $this->_generateSignature($message);
+        $ch = curl_init($bucket.'.'.Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$file);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Length: '.filesize($path),
+            'Content-Type: '.$mimetype,
+            'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature,
+            'Date: '.$requestDate,
+            'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
+            ));
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, array($this, 'saveHeaders'));
+        curl_setopt($ch, CURLINFO_HEADER_OUT, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CULROPT_VERBOSE, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($path));
+
+        $response = curl_exec($ch);
+
+        $this->_requestHeaders = explode("\n", curl_getinfo($ch, CURLINFO_HEADER_OUT));
+        $this->_response = $response;
+
+        curl_close($ch);
     }
 
     /**
@@ -353,6 +405,18 @@ class Tws_Service_Google_Storage
      */
     public function removeObject($object)
     {
+        $requestDate = $this->_getRequestTime();
+        $message = "DELETE\n\n\n$requestDate\n/$object";
+        
+        $this->_sendRequest(
+            $requestDate, 
+            $message, 
+            array(
+                CURLOPT_CUSTOMREQUEST => "DELETE",
+                CURLOPT_NOBODY => true,
+            ), 
+            Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$object
+        );
     }
 
     /**
