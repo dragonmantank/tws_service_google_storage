@@ -38,6 +38,13 @@ class Tws_Service_Google_Storage
      */
     const GOOGLE_STORAGE_URI = 'commondatastorage.googleapis.com';
 
+    const ACL_PRIVATE = 'private';
+    const ACL_PUBLIC_READ = 'public-read';
+    const ACL_PUBLIC_READ_WRITE = 'public-read-write';
+    const ACL_AUTHENTICATED_READ = 'authenticated-read';
+    const ACL_BUCKET_OWNER_READ = 'bucket-owner-read';
+    const ACL_BUCKET_OWNER_FULL_CONTROL = 'bucket-owner-full-control';
+
     /**
      * Flag for Debug Mode
      *
@@ -335,7 +342,7 @@ class Tws_Service_Google_Storage
      * @param string $object bucket/filename on Google Storage
      * @param array $meta Meta Data (Not used yet)
      */
-    public function putFile($path, $object, $meta)
+    public function putFile($path, $object, $meta = array())
     {
         $this->_responseHeaders = array();
         $this->_requestHeaders = array();
@@ -346,23 +353,30 @@ class Tws_Service_Google_Storage
 
         list($bucket, $file) = explode('/', $object);
         $requestDate = $this->_getRequestTime();
-        $message = "PUT\n\n$mimetype\n$requestDate\n/$object";
-
-        $signature = $this->_generateSignature($message);
-        $ch = curl_init($bucket.'.'.Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$file);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        $headers = array(
             'Content-Length: '.filesize($path),
             'Content-Type: '.$mimetype,
-            'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature,
             'Date: '.$requestDate,
             'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
-            ));
+            );
+
+        if(in_array('acl', $meta)) {
+            $headers[] = 'x-goog-acl: '.$meta['acl'];
+        }
+
+        $message = "PUT\n\n$mimetype\n$requestDate\n".(in_array('acl', $meta) ? 'x-goog-acl:'.$meta['acl']."\n" : '')."/$object";
+
+        $signature = $this->_generateSignature($message);
+        $headers[] = 'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature;
+
+        $ch = curl_init($bucket.'.'.Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$file);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_HEADERFUNCTION, array($this, 'saveHeaders'));
         curl_setopt($ch, CURLINFO_HEADER_OUT, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CULROPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($path));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, urlencode(file_get_contents($path)));
 
         $response = curl_exec($ch);
 
