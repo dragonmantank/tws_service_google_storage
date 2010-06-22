@@ -107,7 +107,7 @@ class Tws_Service_Google_Storage
      */ 
     public function createBucket($name)
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "PUT\n\n\n$requestDate\n/$name";
 
         $this->_sendRequest($requestDate, $message, array(
@@ -150,7 +150,7 @@ class Tws_Service_Google_Storage
      */
     public function getBuckets() 
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "GET\n\n\n$requestDate\n/";
 
         $response = $this->_sendRequest($requestDate, $message, array(CURLOPT_RETURNTRANSFER => true));
@@ -174,7 +174,7 @@ class Tws_Service_Google_Storage
      */
     public function getInfo($object)
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "HEAD\n\n\n$requestDate\n/$object";
 
         $response = $this->_sendRequest(
@@ -210,7 +210,7 @@ class Tws_Service_Google_Storage
      */
     public function getObject($object)
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "GET\n\n\n$requestDate\n/$object";
         
         $response = $this->_sendRequest($requestDate, $message, array(
@@ -230,7 +230,7 @@ class Tws_Service_Google_Storage
      */
     public function getObjectsByBucket($bucket)
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "GET\n\n\n$requestDate\n/$bucket/";
 
         $response = $this->_sendRequest(
@@ -265,6 +265,11 @@ class Tws_Service_Google_Storage
     public function getRequestHeaders()
     {
         return $this->_requestHeaders;
+    }
+
+    protected function _getRequestTime()
+    {
+        return date('D, d M Y H:i:s O');
     }
 
     /**
@@ -326,7 +331,7 @@ class Tws_Service_Google_Storage
      */
     public function removeBucket($name)
     {
-        $requestDate = date('D, d M Y H:i:s T');
+        $requestDate = $this->_getRequestTime();
         $message = "DELETE\n\n\n$requestDate\n/$name";
         
         $this->_sendRequest(
