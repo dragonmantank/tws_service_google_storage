@@ -360,30 +360,31 @@ class Tws_Service_Google_Storage
             'User Agent: Tws_Service_Google_Storage-PHP (Mac)',
             );
 
-        if(in_array('acl', $meta)) {
+        if(array_key_exists('acl', $meta)) {
             $headers[] = 'x-goog-acl: '.$meta['acl'];
         }
 
-        $message = "PUT\n\n$mimetype\n$requestDate\n".(in_array('acl', $meta) ? 'x-goog-acl:'.$meta['acl']."\n" : '')."/$object";
+        $message = "PUT\n\n$mimetype\n$requestDate\n".(array_key_exists('acl', $meta) ? 'x-goog-acl:'.$meta['acl']."\n" : '')."/$object";
 
         $signature = $this->_generateSignature($message);
         $headers[] = 'Authorization: GOOG1 '.self::$_google_access_key.':'.$signature;
-
+        $uploadFile = realpath($path);
+        $fh = fopen($uploadFile, 'r');
         $ch = curl_init($bucket.'.'.Tws_Service_Google_Storage::GOOGLE_STORAGE_URI.'/'.$file);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_HEADERFUNCTION, array($this, 'saveHeaders'));
         curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_PUT, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CULROPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, urlencode(file_get_contents($path)));
-
+        curl_setopt($ch, CURLOPT_INFILE, $fh);
+        curl_setopt($ch, CURLOPT_INFILESIZE, filesize($path));
         $response = curl_exec($ch);
 
         $this->_requestHeaders = explode("\n", curl_getinfo($ch, CURLINFO_HEADER_OUT));
         $this->_response = $response;
 
         curl_close($ch);
+        fclose($fh);
     }
 
     /**
