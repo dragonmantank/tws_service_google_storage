@@ -397,7 +397,7 @@ class Tws_Service_Google_Storage
 
         $mimetype = $this->_getMimeType($path);
 
-        list($bucket, $file) = explode('/', $object);
+        list($bucket, $file) = explode('/', $object, 2);
         $requestDate = $this->_getRequestTime();
         $headers = array(
             'Content-Length: '.filesize($path),
